@@ -1,0 +1,180 @@
+{
+  "_meta": {
+    "feature": "FR-11 — Order history view (user)",
+    "sut": "EShop",
+    "surface": "Right pane of /profile page ('Lịch sử đơn hàng' table)",
+    "dataDriven": true,
+    "note": "Test data is data-driven via this JSON. Each case is fully described by its fields; the spec reads them in a loop. Each case targets one or more assertion patterns from the suite: (1) toBeVisible, (2) toContainText/toHaveText, (3) toHaveCount, (4) toHaveURL, (5) page.on('dialog') for alert capture, (6) class-name assertion via locator.evaluate, (7) numeric pattern assertion on currency / id formatting."
+  },
+  "cases": [
+    {
+      "id": "TC-FR11-001",
+      "description": "authenticated user with no orders sees the empty-state message",
+      "authMode": "fresh-user",
+      "seedOrders": 0,
+      "outcome": "empty-state",
+      "expectedText": "Bạn chưa có đơn hàng nào."
+    },
+    {
+      "id": "TC-FR11-002",
+      "description": "table header 'Lịch sử đơn hàng' is rendered when the user is logged in",
+      "authMode": "fresh-user",
+      "seedOrders": 0,
+      "outcome": "header-visible",
+      "expectedText": "Lịch sử đơn hàng"
+    },
+    {
+      "id": "TC-FR11-003",
+      "description": "table renders exactly 1 row when the user has 1 order",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "outcome": "row-count",
+      "expectedCount": 1
+    },
+    {
+      "id": "TC-FR11-004",
+      "description": "table renders exactly 5 rows when the user has 5 orders (BVA: low-N boundary)",
+      "authMode": "fresh-user",
+      "seedOrders": 5,
+      "outcome": "row-count",
+      "expectedCount": 5
+    },
+    {
+      "id": "TC-FR11-005",
+      "description": "orders are sorted newest-first (descending id) when seeded in ascending order",
+      "authMode": "fresh-user",
+      "seedOrders": 3,
+      "outcome": "sort-newest-first",
+      "expectedCount": 3
+    },
+    {
+      "id": "TC-FR11-006",
+      "description": "total amount renders with '₫' suffix and locale-grouped digits (100000 → '100.000 ₫')",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "seedAmount": 100000,
+      "outcome": "amount-formatted",
+      "expectedText": "100.000 ₫"
+    },
+    {
+      "id": "TC-FR11-007",
+      "description": "status badge for 'pending' order shows localized label 'Chờ xác nhận' and yellow bg",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "pending",
+      "outcome": "status-label-and-class",
+      "expectedText": "Chờ xác nhận",
+      "expectedClassIncludes": "bg-yellow-100"
+    },
+    {
+      "id": "TC-FR11-008",
+      "description": "status badge for 'confirmed' order shows 'Đã xác nhận' and indigo bg",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "confirmed",
+      "outcome": "status-label-and-class",
+      "expectedText": "Đã xác nhận",
+      "expectedClassIncludes": "bg-indigo-100"
+    },
+    {
+      "id": "TC-FR11-009",
+      "description": "status badge for 'shipping' order shows 'Đang giao' and blue bg",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "shipping",
+      "outcome": "status-label-and-class",
+      "expectedText": "Đang giao",
+      "expectedClassIncludes": "bg-blue-100"
+    },
+    {
+      "id": "TC-FR11-010",
+      "description": "status badge for 'delivered' order shows 'Đã giao' and green bg",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "delivered",
+      "outcome": "status-label-and-class",
+      "expectedText": "Đã giao",
+      "expectedClassIncludes": "bg-green-100"
+    },
+    {
+      "id": "TC-FR11-011",
+      "description": "status badge for 'canceled' order shows 'Đã hủy' and red bg",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "canceled",
+      "outcome": "status-label-and-class",
+      "expectedText": "Đã hủy",
+      "expectedClassIncludes": "bg-red-100"
+    },
+    {
+      "id": "TC-FR11-012",
+      "description": "cancel button is visible for a 'pending' order",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "pending",
+      "outcome": "cancel-button-visible",
+      "expectedCount": 1
+    },
+    {
+      "id": "TC-FR11-013",
+      "description": "cancel button is NOT rendered for a 'delivered' order",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "delivered",
+      "outcome": "cancel-button-hidden",
+      "expectedCount": 0
+    },
+    {
+      "id": "TC-FR11-014",
+      "description": "cancel button is NOT rendered for a 'canceled' order",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "canceled",
+      "outcome": "cancel-button-hidden",
+      "expectedCount": 0
+    },
+    {
+      "id": "TC-FR11-015",
+      "description": "clicking 'Hủy đơn' on a pending order fires a success alert and the row's status flips to canceled",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "targetStatus": "pending",
+      "outcome": "cancel-then-status-flip",
+      "expectedText": "Hủy đơn thành công"
+    },
+    {
+      "id": "TC-FR11-016",
+      "description": "unauthenticated visit to /profile renders the 'please log in' message instead of the table",
+      "authMode": "anonymous",
+      "outcome": "auth-required",
+      "expectedText": "Vui lòng đăng nhập"
+    },
+    {
+      "id": "TC-FR11-017",
+      "description": "BVA: a 1-VND amount still formats as '1 ₫' with the ₫ suffix",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "seedAmount": 1,
+      "outcome": "amount-formatted",
+      "expectedText": "1 ₫"
+    },
+    {
+      "id": "TC-FR11-018",
+      "description": "BVA: a 9-digit amount formats with two grouping separators (1.234.567.890 ₫)",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "seedAmount": 1234567890,
+      "outcome": "amount-formatted",
+      "expectedText": "1.234.567.890 ₫"
+    },
+    {
+      "id": "TC-FR11-019",
+      "description": "isolation: a different user's order does NOT appear in this user's table",
+      "authMode": "fresh-user",
+      "seedOrders": 1,
+      "extraSeedForOtherUser": 1,
+      "outcome": "row-count",
+      "expectedCount": 1
+    }
+  ]
+}
