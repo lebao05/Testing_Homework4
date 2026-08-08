@@ -1,0 +1,22 @@
+{
+  "name": "homework4",
+  "version": "1.0.0",
+  "description": "HW04 – Automation Testing suite for EShop SUT (FR03, FR11, FR13)",
+  "author": "23127325",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "test:chrome": "playwright test --project=chromium",
+    "test:edge": "playwright test --project=edge",
+    "test:firefox": "playwright test --project=firefox",
+    "install-browsers": "playwright install chromium chrome msedge firefox"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
