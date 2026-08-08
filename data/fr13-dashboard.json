@@ -1,0 +1,133 @@
+{
+  "_meta": {
+    "feature": "FR-13 — Dashboard (admin)",
+    "sut": "EShop admin SPA (frontend-admin, default http://localhost:5174)",
+    "surface": "Dashboard tab inside the admin SPA. The tab is the default landing tab after admin login. The dashboard renders two stat cards: 'Tổng doanh thu (Delivered)' and 'Tổng số đơn hàng'.",
+    "dataDriven": true,
+    "note": "The DB is seeded at startup with 18 orders (2 delivered: 600000 and 100000). The dashboard's revenue formula is `sum(o.total_amount * 2 for delivered)` — the `* 2` is a known SUT defect. Tests use BEFORE/AFTER deltas so they are robust against the seed count evolving. Each test seeds through the real admin endpoint chain (register a fresh user → checkout → admin flips status). No `waitForTimeout`; all waits are state-based."
+  },
+  "cases": [
+    {
+      "id": "TC-FR13-001",
+      "description": "unauthenticated visit to the admin app renders the 'Admin Login' form instead of the dashboard",
+      "outcome": "auth-required",
+      "expectedText": "Admin Login"
+    },
+    {
+      "id": "TC-FR13-002",
+      "description": "successful login with the seeded admin credentials renders the dashboard tab by default",
+      "outcome": "login-success",
+      "expectedText": "Dashboard"
+    },
+    {
+      "id": "TC-FR13-003",
+      "description": "the dashboard header 'Dashboard' is rendered after login",
+      "outcome": "header-visible",
+      "expectedText": "Dashboard"
+    },
+    {
+      "id": "TC-FR13-004",
+      "description": "the 'Tổng doanh thu (Delivered)' stat card is rendered",
+      "outcome": "stat-card-visible",
+      "statCard": "revenue",
+      "expectedText": "Tổng doanh thu (Delivered)"
+    },
+    {
+      "id": "TC-FR13-005",
+      "description": "the 'Tổng số đơn hàng' stat card is rendered",
+      "outcome": "stat-card-visible",
+      "statCard": "orderCount",
+      "expectedText": "Tổng số đơn hàng"
+    },
+    {
+      "id": "TC-FR13-006",
+      "description": "adding N pending orders increases the dashboard's total order count by exactly N",
+      "outcome": "order-count-delta",
+      "ordersToAdd": 3,
+      "orderStatus": "pending",
+      "expectedDelta": 3
+    },
+    {
+      "id": "TC-FR13-007",
+      "description": "adding N pending orders does NOT change the delivered revenue",
+      "outcome": "revenue-unchanged-by-pending",
+      "ordersToAdd": 2,
+      "orderStatus": "pending",
+      "expectedDelta": 0
+    },
+    {
+      "id": "TC-FR13-008",
+      "description": "adding ONE delivered order increases the displayed revenue by amount * 2 (proves the SUT's '× 2' defect)",
+      "outcome": "revenue-delta-by-delivered",
+      "ordersToAdd": 1,
+      "orderStatus": "delivered",
+      "seedAmount": 100000,
+      "expectedDelta": 200000
+    },
+    {
+      "id": "TC-FR13-009",
+      "description": "BVA: adding a 1 VND delivered order increases the revenue by 2",
+      "outcome": "revenue-delta-by-delivered",
+      "ordersToAdd": 1,
+      "orderStatus": "delivered",
+      "seedAmount": 1,
+      "expectedDelta": 2
+    },
+    {
+      "id": "TC-FR13-010",
+      "description": "BVA: adding a 30,000,000 VND delivered order increases the revenue by 60,000,000",
+      "outcome": "revenue-delta-by-delivered",
+      "ordersToAdd": 1,
+      "orderStatus": "delivered",
+      "seedAmount": 30000000,
+      "expectedDelta": 60000000
+    },
+    {
+      "id": "TC-FR13-011",
+      "description": "login as a non-admin account shows the 'role check' alert and does NOT render the dashboard",
+      "outcome": "non-admin-login-blocked",
+      "expectedText": "Bạn không phải là admin!"
+    },
+    {
+      "id": "TC-FR13-012",
+      "description": "login with the wrong password shows the 'Đăng nhập thất bại' alert and the form remains",
+      "outcome": "bad-password",
+      "expectedText": "Đăng nhập thất bại"
+    },
+    {
+      "id": "TC-FR13-013",
+      "description": "before login, the sidebar nav items (Dashboard, Danh mục, Sản phẩm, ...) are NOT rendered",
+      "outcome": "auth-required",
+      "expectedText": "Admin Login"
+    },
+    {
+      "id": "TC-FR13-014",
+      "description": "after login, the sidebar nav items are rendered (at least the 'Dashboard' tab is visible)",
+      "outcome": "sidebar-visible",
+      "expectedText": "Dashboard"
+    },
+    {
+      "id": "TC-FR13-015",
+      "description": "clicking the 'Đơn hàng' sidebar tab switches away from the dashboard",
+      "outcome": "tab-switch",
+      "expectedText": "Quản lý Đơn hàng"
+    },
+    {
+      "id": "TC-FR13-016",
+      "description": "the revenue stat card formats the number with Vietnamese grouping and a '₫' suffix",
+      "outcome": "currency-format",
+      "expectedText": "₫"
+    },
+    {
+      "id": "TC-FR13-017",
+      "description": "BUG-FR-13-001 detector: the dashboard's revenue cell equals the CORRECT sum of delivered amounts (not × 2). Fails on the buggy SUT where revenue shows twice the actual value.",
+      "outcome": "bug-detector-revenue-times-two",
+      "bugRef": "BUG-FR-13-001"
+    },
+    {
+      "id": "TC-FR13-018",
+      "description": "BUG-FR-13-001 ratio detector: dashboard revenue is exactly 2× the correct sum. Confirms the bug from the GitHub issue is still present and reproducible.",
+      "outcome": "bug-detector-revenue-times-two"
+    }
+  ]
+}

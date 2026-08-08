@@ -10,8 +10,17 @@
  * - `waitForAlert`      — resolve next alert dialog and assert its message.
  * - `loginViaUi`        — drive /login through the real form (for FR-03).
  *
+ * Admin helpers (FR-13):
+ * - `loginAdminViaApi`   — POST /api/login, returns the admin JWT.
+ * - `loginAdminViaUi`    — drive the admin login form (placeholder-anchored).
+ * - `injectAdminAuth`    — write adminToken to localStorage before navigation.
+ * - `countAdminOrders`   — get baseline order count for delta tests.
+ * - `getAdminRevenue`    — get baseline delivered revenue for delta tests.
+ * - `adminCreateOrder`   — mint ONE order via /api/checkout as any user.
+ *
  * All helpers avoid fragile selectors (no XPath position indices, no
- * `placeholder=`), avoid `waitForTimeout`, and assert on observable state.
+ * `placeholder=` except where the SUT genuinely uses it), avoid
+ * `waitForTimeout`, and assert on observable state.
  */
 
 const { request, expect } = require('@playwright/test');
@@ -286,6 +295,186 @@ function waitForAlert(page, expected) {
   );
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Admin helpers (FR-13 — Dashboard)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Login via /api/login and return the JWT. Throws if the user is not admin.
+ * @param {string} email
+ * @param {string} password
+ */
+async function loginAdminViaApi(email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
+  const ctx = await request.newContext({ baseURL: API_BASE });
+  try {
+    const res = await ctx.post('/api/login', { data: { email, password } });
+    if (!res.ok()) {
+      throw new Error(
+        `Admin login failed for ${email}: ${res.status()} ${await res.text()}`,
+      );
+    }
+    const body = await res.json();
+    if (!body.token) throw new Error(`Admin login ${email} returned no token`);
+    if (body.user && body.user.role !== 'admin') {
+      throw new Error(`User ${email} is not an admin (role=${body.user.role})`);
+    }
+    return /** @type {string} */ (body.token);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+/**
+ * Drive the admin login form via the real UI. The admin form uses
+ * `placeholder="Email"` and `placeholder="Password"` (the only placeholders
+ * in the admin SPA), so we anchor on those. After submit, the page
+ * navigates to the dashboard (default tab).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} email
+ * @param {string} password
+ */
+async function loginAdminViaUi(page, email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
+  // Form is in the `<h2>Admin Login</h2>` card.
+  const emailInput = page.locator('input[placeholder="Email"]');
+  const passwordInput = page.locator('input[placeholder="Password"]');
+  await expect(emailInput, 'admin login email field').toBeVisible({ timeout: 10_000 });
+  await expect(passwordInput, 'admin login password field').toBeVisible();
+  await emailInput.fill(email);
+  await passwordInput.fill(password);
+  await page.getByRole('button', { name: 'Login', exact: true }).click();
+}
+
+/**
+ * Inject an admin session by writing `adminToken` into localStorage before
+ * the page navigates. The SUT reads `localStorage.getItem("adminToken")`
+ * on mount to decide whether to render the login form or the dashboard.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} token
+ */
+async function injectAdminAuth(page, token) {
+  await page.addInitScript(
+    (t) => {
+      localStorage.setItem('adminToken', t);
+    },
+    token,
+  );
+}
+
+/**
+ * Get the current global order count from the admin endpoint. Used to
+ * measure **deltas** for the dashboard's "Tổng số đơn hàng" stat.
+ * @param {string} adminToken
+ */
+async function countAdminOrders(adminToken) {
+  const ctx = await request.newContext({
+    baseURL: API_BASE,
+    extraHTTPHeaders: { Authorization: `Bearer ${adminToken}` },
+  });
+  try {
+    const res = await ctx.get('/api/admin/orders');
+    if (!res.ok()) {
+      throw new Error(
+        `countAdminOrders failed: ${res.status()} ${await res.text()}`,
+      );
+    }
+    const orders = await res.json();
+    return Array.isArray(orders) ? orders.length : 0;
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+/**
+ * Get the current global "delivered revenue" per the SUT's formula:
+ *   sum(o.total_amount * 2 for o if o.status === 'delivered')
+ * This value is what the dashboard renders as "Tổng doanh thu (Delivered)".
+ * We measure this so tests can detect the SUT's `* 2` bug.
+ *
+ * @param {string} adminToken
+ */
+async function getAdminRevenue(adminToken) {
+  const ctx = await request.newContext({
+    baseURL: API_BASE,
+    extraHTTPHeaders: { Authorization: `Bearer ${adminToken}` },
+  });
+  try {
+    const res = await ctx.get('/api/admin/orders');
+    if (!res.ok()) {
+      throw new Error(
+        `getAdminRevenue failed: ${res.status()} ${await res.text()}`,
+      );
+    }
+    const orders = await res.json();
+    return orders
+      .filter((o) => o.status === 'delivered')
+      .reduce((sum, o) => sum + (o.total_amount || 0) * 2, 0);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+/**
+ * Get the **correct** global delivered revenue (sum, no `× 2`).
+ * Used by the bug-detector test TC-FR13-017 (BUG-FR-13-001).
+ * If the dashboard display matches this number, the SUT is fixed.
+ * If the dashboard display equals 2× this number, the SUT is buggy.
+ *
+ * @param {string} adminToken
+ */
+async function getCorrectAdminRevenue(adminToken) {
+  const ctx = await request.newContext({
+    baseURL: API_BASE,
+    extraHTTPHeaders: { Authorization: `Bearer ${adminToken}` },
+  });
+  try {
+    const res = await ctx.get('/api/admin/orders');
+    if (!res.ok()) {
+      throw new Error(
+        `getCorrectAdminRevenue failed: ${res.status()} ${await res.text()}`,
+      );
+    }
+    const orders = await res.json();
+    return orders
+      .filter((o) => o.status === 'delivered')
+      .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+/**
+ * Mint ONE order via /api/checkout. Needs a user token (any non-admin user
+ * can checkout). Returns the new order ID.
+ *
+ * @param {string} userToken
+ * @param {number} totalAmount
+ */
+async function adminCreateOrder(userToken, totalAmount) {
+  const ctx = await request.newContext({
+    baseURL: API_BASE,
+    extraHTTPHeaders: { Authorization: `Bearer ${userToken}` },
+  });
+  try {
+    const res = await ctx.post('/api/checkout', {
+      data: {
+        total_amount: totalAmount,
+        shipping_address: 'FR13 Seed Address',
+      },
+    });
+    if (!res.ok()) {
+      throw new Error(
+        `adminCreateOrder failed: ${res.status()} ${await res.text()}`,
+      );
+    }
+    const body = await res.json();
+    return Number(body.orderId);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
 module.exports = {
   API_BASE,
   ADMIN_EMAIL,
@@ -303,4 +492,11 @@ module.exports = {
   injectAuth,
   inputAfter,
   waitForAlert,
+  loginAdminViaApi,
+  loginAdminViaUi,
+  injectAdminAuth,
+  countAdminOrders,
+  getAdminRevenue,
+  getCorrectAdminRevenue,
+  adminCreateOrder,
 };
