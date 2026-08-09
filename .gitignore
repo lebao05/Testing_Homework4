@@ -5,8 +5,8 @@ node_modules/
 report.err
 report.log
 node_modules/
-test-results/
-playwright-report/
+test-results
+playwright-report
 blob-report/
 playwright/.cache/
 
