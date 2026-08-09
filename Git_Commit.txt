@@ -1,0 +1,42 @@
+Commits on Aug 9, 2026
+Final playwright report
+lebao05
+lebao05
+committed
+2 minutes ago
+Agent-Skill
+lebao05
+lebao05
+committed
+1 hour ago
+Playwright result
+lebao05
+lebao05
+committed
+7 hours ago
+playright result
+lebao05
+lebao05
+committed
+7 hours ago
+Update scripts after revewing
+lebao05
+lebao05
+committed
+7 hours ago
+Commits on Aug 8, 2026
+Script and data for scripts
+lebao05
+lebao05
+committed
+yesterday
+script and data for order-history
+lebao05
+lebao05
+committed
+yesterday
+Add Playright config, script and data for forgot-passowrd
+lebao05
+lebao05
+committed
+yesterday

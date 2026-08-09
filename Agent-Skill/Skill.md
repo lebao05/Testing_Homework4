@@ -11,6 +11,7 @@ Use this skill when the user asks to **generate, extend, or audit Playwright aut
 
 The skill is **read-only** with respect to the SUT — it never edits `eshop-sut/`. It only writes / edits files under `data/` and `scripts/`.
 
+If there is no testcasesdesign.md, you can create test cases design by yourself.
 ---
 
 ## When to use this skill
@@ -60,6 +61,7 @@ The agent must **never** guess selectors or endpoint paths — every value must 
    - `preconditions` (logged in as X, has N orders, etc.)
    - `steps` (the action sequence)
    - `expected` (text / status / URL / DOM state)
+If there is no testcasesdesign.md, you can create test cases design by yourself.
 
 ---
 
@@ -89,6 +91,7 @@ Search the frontend source (`eshop-sut/frontend-{user,admin}/src/App.jsx`) for t
 
 ## Step 3 — Identify backend API requirements
 
+Go to api requirement.md for business rule
 Search the backend for the exact endpoints and shapes used by the test case. Open `eshop-sut/backend/server.js` (or `routes/*.js`) and grep for the method + path.
 
 Capture for every API the test will call:
@@ -227,7 +230,7 @@ test.describe(`FR-XX — <Feature name> (Run by: ${STUDENT_ID})`, () => {
   }
 });
 ```
-
+Do not run test, let me run myself
 ### Hard rules
 
 - **One `test()` per JSON case** — `for (const c of data.cases)` is the only loop.
@@ -244,20 +247,6 @@ test.describe(`FR-XX — <Feature name> (Run by: ${STUDENT_ID})`, () => {
 - Refer to the JSON `outcome` first; only fall back to a hardcoded selector when the outcome is unique.
 - For ambiguous selectors, use `.first()` or scope to a row: `page.locator('tr', { has: ... })`.
 - **Never** re-introduce `page.getByText('Dashboard')` — the FR-13 fix is `page.getByRole('heading', { name: 'Dashboard', exact: true })`.
-
----
-
-## Step 7 — Verify before declaring done
-
-Before reporting the new files to the user, run the following self-check:
-
-1. **JSON shape** — `node -e "const d = require('./data/frXX-....json'); console.log(d.cases.length); console.log(new Set(d.cases.map(c => c.outcome)).size === d.cases.length ? 'unique outcomes' : 'DUPLICATE OUTCOMES')"` — must print count and `unique outcomes`.
-2. **Syntax check** — `node -c scripts/frXX-....spec.js` (use `node --check` for non-module; for ESM-style top-level awaits Playwright will compile via `npx playwright test --list`).
-3. **Test list** — `npx playwright test scripts/frXX-....spec.js --list` — must list one entry per JSON case, three times (chromium / edge / firefox).
-4. **Dry run** — `npx playwright test scripts/frXX-....spec.js --dry-run` (if the project supports it) — must exit 0.
-5. **No SUT edits** — `git diff eshop-sut/` must be empty.
-
-If any check fails, fix the file and re-run **before** telling the user the work is done.
 
 ---
 
