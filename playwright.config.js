@@ -38,7 +38,7 @@ module.exports = defineConfig({
   fullyParallel: false,        // shared SQLite SUT → sequential per project
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: 5,
   reporter: [
     ['list'],
     ['html', {
