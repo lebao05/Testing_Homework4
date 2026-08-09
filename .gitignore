@@ -5,7 +5,6 @@ node_modules/
 report.err
 report.log
 node_modules/
-test-results
 blob-report/
 
 .env
