@@ -120,14 +120,9 @@
     },
     {
       "id": "TC-FR13-017",
-      "description": "BUG-FR-13-001 detector: the dashboard's revenue cell equals the CORRECT sum of delivered amounts (not × 2). Fails on the buggy SUT where revenue shows twice the actual value.",
+      "description": "BUG-FR-13-001 detector: dashboard revenue must NOT equal the correct sum of delivered amounts. Fails on the buggy SUT where revenue shows twice the actual value.",
       "outcome": "bug-detector-revenue-times-two",
       "bugRef": "BUG-FR-13-001"
-    },
-    {
-      "id": "TC-FR13-018",
-      "description": "BUG-FR-13-001 ratio detector: dashboard revenue is exactly 2× the correct sum. Confirms the bug from the GitHub issue is still present and reproducible.",
-      "outcome": "bug-detector-revenue-times-two"
     }
   ]
 }

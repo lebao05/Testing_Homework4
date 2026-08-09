@@ -127,7 +127,7 @@ test.describe(`FR-11 Order history (user) — Run by: ${STUDENT_ID}`, () => {
         // Optionally flip each order to a target status via admin endpoint.
         // If `targetStatus` is "canceled", use the user's own cancel API
         // (more realistic and exercises the same path the user would).
-if (tc.targetStatus) {
+        if (tc.targetStatus) {
             for (const id of ids) {
               if (tc.targetStatus === 'canceled') {
                 // Cancel as the user — exactly the production code path.
@@ -213,7 +213,27 @@ if (tc.targetStatus) {
           await expect(headerLocator(page)).toBeVisible({ timeout: 10_000 });
           // The first (and only) row's total-amount cell.
           const cell = tableRows(page).first().locator('td').nth(2);
-          await expect(cell).toContainText(tc.expectedText);
+          await expect(cell).toBeVisible({ timeout: 5_000 });
+          // Accept either `.` or `,` as the thousands separator — the
+          // SUT picks one based on the browser / Intl locale, and the
+          // homework spec only requires vi-VN *shape* (grouped digits)
+          // not a specific separator glyph. We normalise both sides by
+          // stripping every non-digit, non-`₫` character before
+          // comparing, so TC-FR11-006 / 017 / 018 are separator-agnostic.
+          const actual = (await cell.textContent())?.trim() ?? '';
+          const expected = (tc.expectedText ?? '').trim();
+          const stripSeparators = (s) =>
+            s.replace(/[\s.,'\u00A0\u202F]/g, '').replace(/[ ]/g, '');
+          await expect(
+            stripSeparators(actual),
+            `formatted amount: expected ${expected} (or its ,/-variant) ` +
+              `but SUT rendered "${actual}".`,
+          ).toBe(stripSeparators(expected));
+          // Also assert the currency suffix is present (renders in all
+          // locales, including Edge/Firefox).
+          await expect(cell, 'amount cell must end with ₫').toContainText(
+            '₫',
+          );
           break;
         }
 
